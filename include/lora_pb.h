@@ -90,7 +90,15 @@ inline void asciiFold(char* s, bool emoji = false) {
     bool flagOpen = false;                     // between the two halves of a flag
     while (*r) {
         const uint8_t c = *r;
-        if (c < 0x80) { *w++ = (char)c; r++; joined = false; flagOpen = false; continue; }
+        // A control character -- a newline above all -- would be printed as a
+        // move to the start of the next line and spill the message onto the
+        // rows below it. It becomes a space (a CR goes), and a stray 0x01 can
+        // no longer pass for the start of an emoji token.
+        if (c < 0x80) {
+            if (c == '\r') { r++; continue; }
+            *w++ = (c < 0x20 || c == 0x7F) ? ' ' : (char)c;
+            r++; joined = false; flagOpen = false; continue;
+        }
         const uint8_t n = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : c >= 0xC0 ? 2 : 1;
         uint32_t cp = n == 4 ? (c & 0x07) : n == 3 ? (c & 0x0F) : n == 2 ? (c & 0x1F) : 0;
         uint8_t k = 1;

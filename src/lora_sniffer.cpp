@@ -30,6 +30,7 @@
 #include "lora_dm.h"
 #include "lora_mcdm.h"
 #include "emoji_cp.h"
+#include "lora_pb.h"
 #include "gnss.h"
 #include <math.h>
 #include "squachy.h"
@@ -594,7 +595,10 @@ static void mcOnText(uint32_t peer, const char* name, const MeshCore::DirectText
     pk.proto = Proto::MESHCORE; pk.ms = now;
     char who[32];
     if (name && name[0]) snprintf(who, sizeof who, "%s", name); else snprintf(who, sizeof who, "%08lx", (unsigned long)peer);
-    Msgs::noteDm(peer, false, 0, 0, who, t.text, pk, now, true, 0, Msgs::meshCoreKey(who, t.text, t.timestamp), Proto::MESHCORE);
+    char shown[sizeof t.text];                     // folded to ASCII for the screen; the key is of the raw text
+    memcpy(shown, t.text, sizeof shown);
+    Pb::asciiFold(shown, true);
+    Msgs::noteDm(peer, false, 0, 0, who, shown, pk, now, true, 0, Msgs::meshCoreKey(who, t.text, t.timestamp), Proto::MESHCORE);
     Serial.printf("[lora] MeshCore DM from %s: %s" "\n", who, t.text);
 }
 static void mcHook(const MeshCore::Decoded& d, uint32_t now) { McDm::onFrame(d, now); }

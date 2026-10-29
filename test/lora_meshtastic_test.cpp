@@ -359,5 +359,19 @@ int main() {
         ck("and a reply never puts it on the air as a code point", !strcmp(w, "x?y"));
     }
 
+    suite("Control characters in received text");
+    {
+        char b[64];
+        snprintf(b, sizeof b, "Getting\nVoter ID\r\n\tcard");
+        Pb::asciiFold(b, true);
+        ck("a newline is a space, a CR is gone", !strcmp(b, "Getting Voter ID  card"));
+        snprintf(b, sizeof b, "a\x01 b");     // a forged emoji-token byte
+        Pb::asciiFold(b, true);
+        ck("a stray 0x01 is a space and cannot open a token", !strcmp(b, "a  b"));
+        snprintf(b, sizeof b, "x\x7F" "y");
+        Pb::asciiFold(b, false);
+        ck("DEL too", !strcmp(b, "x y"));
+    }
+
     return report();
 }
