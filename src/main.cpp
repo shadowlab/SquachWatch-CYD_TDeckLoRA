@@ -1638,7 +1638,14 @@ static void tdeckKeysTick(uint32_t now) {
     if (Wire.requestFrom((int)TDECK_KBD, 1) != 1) return;
     const uint8_t k = (uint8_t)Wire.read();
     if (k == 0 || k == 0x0C) return;             // nothing, or alt+C (its own)
-    const char c = k == 0x0D ? '\n' : k == 0x08 ? '\b' : (char)k;
+    // SHIFT+$ comes back from the helper chip as 0x04, which no screen has any
+    // use for: it types the "=" the LoRa channel keys end in. (SYM+$ cannot be
+    // used: the chip answers 0x00 for it, the same byte as "no key".) Any other
+    // byte it sends that no screen can use is logged, so a key that does
+    // nothing can be looked up.
+    char c = k == 0x0D ? '\n' : k == 0x08 ? '\b' : (char)k;
+    if (k == 0x04) c = '=';
+    else if (k >= 0x7F || (k < 0x20 && k != 0x0D && k != 0x08)) Serial.printf("[kbd] key 0x%02X has no mapping\n", (unsigned)k);
     if (state == AppState::WIFI_PASS) uiWifiPassKey(c, now);
 #if SQUACH_MESH
     else if (state == AppState::PHONE) uiPhoneKey(c);
