@@ -332,6 +332,27 @@ size_t encodeDeviceTelemetry(uint32_t epoch, uint8_t batteryPct, float volts, fl
     return (size_t)(q - out);
 }
 
+size_t encodeNeighborInfo(uint32_t self, uint32_t lastSentBy, uint32_t intervalSecs,
+                          const uint32_t* ids, const float* snr, uint8_t n, uint8_t* out) {
+    if (!out) return 0;
+    if (n > 10) n = 10;
+    uint8_t* q = out;
+    *q++ = 0x08; q += putVar(q, self);                 // node_id
+    *q++ = 0x10; q += putVar(q, lastSentBy);           // last_sent_by_id
+    *q++ = 0x18; q += putVar(q, intervalSecs);         // node_broadcast_interval_secs
+    for (uint8_t i = 0; i < n; i++) {
+        uint8_t m[12];
+        size_t p = 0;
+        m[p++] = 0x08; p += putVar(m + p, ids[i]);     // Neighbor.node_id
+        uint32_t b;
+        memcpy(&b, &snr[i], 4);
+        m[p++] = 0x15; wr32le(m + p, b); p += 4;       // Neighbor.snr
+        *q++ = 0x22; *q++ = (uint8_t)p;                // neighbors
+        memcpy(q, m, p); q += p;
+    }
+    return (size_t)(q - out);
+}
+
 static bool s_okToMqtt = false;
 void setOkToMqtt(bool on) { s_okToMqtt = on; }
 

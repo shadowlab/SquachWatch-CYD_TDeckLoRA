@@ -35,7 +35,7 @@ enum Id : uint8_t {
     // the main list
     LISTEN, PRESET, MT_REGION, MT_SLOT, MT_KEY, TX, HOPS, REGION, CHANNELS,
     NAME, SHORTNAME, ANNOUNCE, ROLE, OKMQTT,
-    P_ON, P_INT, P_SMART, P_DIST, P_MIN, P_PREC, T_ON, T_INT,
+    P_ON, P_INT, P_SMART, P_DIST, P_MIN, P_PREC, T_ON, T_INT, N_ON, N_INT,
     MSGSOUND,
     DETECT, ONSCREEN,
     LOOKUPS, LK_CALL, LK_OGN, LK_FEED,
@@ -344,6 +344,19 @@ void buildMain() {
         r.dim = !Settings::telShare();
         spanText(r.value, sizeof r.value, Settings::telIntervalSecs());
         snprintf(r.hint, sizeof r.hint, "30 MIN = STOCK");
+    }
+
+    section("NEIGHBOR INFO");
+    {
+        Row& r = add(N_ON, "SHARE NEIGHBORS");
+        onOff(r, Settings::nbrShare());
+        snprintf(r.hint, sizeof r.hint, Settings::loraMtKeyCustom() ? "NODES WE HEAR DIRECTLY. PRIMARY" : "BEST ON A PRIVATE CHANNEL KEY");
+    }
+    {
+        Row& r = add(N_INT, "INTERVAL");
+        r.dim = !Settings::nbrShare();
+        spanText(r.value, sizeof r.value, Settings::nbrIntervalSecs());
+        snprintf(r.hint, sizeof r.hint, "6 H = STOCK, 4 H IS THE MINIMUM");
     }
 
     section("CHATS");
@@ -763,6 +776,8 @@ void tapRow(const Row& r) {
         case P_PREC:   Settings::cyclePosPrecision(); break;
         case T_ON:     Settings::toggleTelShare(); break;
         case T_INT:    Settings::cycleTelInterval(); break;
+        case N_ON:     Settings::toggleNbrShare(); break;
+        case N_INT:    Settings::cycleNbrInterval(); break;
         case ROLE:     Settings::toggleLoraRole(); Lora::identityChanged(); break;
         case OKMQTT:   Settings::toggleLoraOkMqtt(); Meshtastic::setOkToMqtt(Settings::loraOkMqtt()); break;
         case MSGSOUND: Settings::toggleLoraMsgSound(); break;

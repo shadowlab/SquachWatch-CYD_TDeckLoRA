@@ -426,6 +426,13 @@ namespace Settings {
     void        toggleTelShare();
     uint32_t    telIntervalSecs();
     void        cycleTelInterval();
+    // NEIGHBOR INFO: broadcast the nodes we hear directly, with their SNR, the
+    // way Meshtastic's module does. Off by default. The interval is 4, 6 (stock),
+    // 12 or 24 hours -- the firmware's own floor is 4. Keys "nbrOn" "nbrInt".
+    bool        nbrShare();
+    void        toggleNbrShare();
+    uint32_t    nbrIntervalSecs();
+    void        cycleNbrInterval();
     // OK TO MQTT: mark our packets as fine to relay to MQTT-fed services.
     // Off by default. Key "loraOkMq".
     bool        loraOkMqtt();

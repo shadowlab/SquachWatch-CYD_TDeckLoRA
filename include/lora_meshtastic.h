@@ -122,6 +122,11 @@ uint16_t buildFrame(const Channel& c, uint32_t from, uint32_t id, uint8_t hops, 
 // (32 = all of them; 0 sends nothing and returns 0).
 size_t   encodePosition(int32_t lat7, int32_t lon7, int32_t altM, bool hasAlt, uint32_t epoch, uint8_t sats,
                         uint8_t precisionBits, uint8_t* out);
+// NeighborInfo (port 71): who we are, how often we say so, and the nodes heard
+// directly with the SNR each was heard at. At most 10 neighbors (the firmware's
+// own cap); `out` needs room for 160. Returns the length.
+size_t   encodeNeighborInfo(uint32_t self, uint32_t lastSentBy, uint32_t intervalSecs,
+                            const uint32_t* ids, const float* snr, uint8_t n, uint8_t* out);
 size_t   encodeDeviceTelemetry(uint32_t epoch, uint8_t batteryPct, float volts, float chanUtil, float airUtilTx,
                                uint32_t uptimeSecs, uint8_t* out);
 // OK to MQTT, the official client's flag: every Data this file encodes carries

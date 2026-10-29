@@ -218,6 +218,8 @@ static bool     s_loraAlerts   = true;
 static uint8_t  s_loraHops     = 3;
 static uint8_t  s_loraRole     = 0;   // CLIENT
 static bool     s_loraOkMq     = false;
+static bool     s_nbrOn = false;
+static uint8_t  s_nbrInt = 1;                 // 6 hours
 static bool     s_posOn = false, s_posSmart = true, s_telOn = false;
 static uint8_t  s_posInt = 5, s_posDist = 2, s_posMin = 1, s_posPrec = 3, s_telInt = 1;   // 15 min, 100 m, 30 s, 13 bits, 30 min
 static bool     s_loraMsgSnd   = true;
@@ -487,6 +489,7 @@ static const uint16_t POS_DIST[] = { 25, 50, 100, 200, 500, 1000 };
 static const uint16_t POS_MIN[]  = { 15, 30, 60, 120, 300 };
 static const uint8_t  POS_PREC[] = { 32, 19, 16, 13, 10 };
 static const uint32_t TEL_INT[]  = { 900, 1800, 3600, 7200, 21600, 86400 };
+static const uint32_t NBR_INT[] = { 14400, 21600, 43200, 86400 };
 #define SQ_N(a) (sizeof(a) / sizeof((a)[0]))
 bool posShare() { return s_posOn; }
 void togglePosShare() { s_posOn = !s_posOn; s_prefs.putBool("posOn", s_posOn); }
@@ -503,6 +506,10 @@ void cyclePosPrecision() { s_posPrec = (uint8_t)((s_posPrec + 1) % SQ_N(POS_PREC
 bool telShare() { return s_telOn; }
 void toggleTelShare() { s_telOn = !s_telOn; s_prefs.putBool("telOn", s_telOn); }
 uint32_t telIntervalSecs() { return TEL_INT[s_telInt]; }
+bool nbrShare() { return s_nbrOn; }
+void toggleNbrShare() { s_nbrOn = !s_nbrOn; s_prefs.putBool("nbrOn", s_nbrOn); }
+uint32_t nbrIntervalSecs() { return NBR_INT[s_nbrInt]; }
+void cycleNbrInterval() { s_nbrInt = (uint8_t)((s_nbrInt + 1) % SQ_N(NBR_INT)); s_prefs.putUChar("nbrInt", s_nbrInt); }
 void cycleTelInterval() { s_telInt = (uint8_t)((s_telInt + 1) % SQ_N(TEL_INT)); s_prefs.putUChar("telInt", s_telInt); }
 bool loraOkMqtt() { return s_loraOkMq; }
 void toggleLoraOkMqtt() { s_loraOkMq = !s_loraOkMq; s_prefs.putBool("loraOkMq", s_loraOkMq); }
@@ -765,6 +772,8 @@ void load() {
     s_posDist  = s_prefs.getUChar("posDist", 2);  if (s_posDist >= SQ_N(POS_DIST)) s_posDist = 2;
     s_posMin   = s_prefs.getUChar("posMin", 1);   if (s_posMin  >= SQ_N(POS_MIN))  s_posMin  = 1;
     s_posPrec  = s_prefs.getUChar("posPrec", 3);  if (s_posPrec >= SQ_N(POS_PREC)) s_posPrec = 3;
+    s_nbrOn    = s_prefs.getBool("nbrOn", false);
+    s_nbrInt   = s_prefs.getUChar("nbrInt", 1);   if (s_nbrInt  >= SQ_N(NBR_INT))  s_nbrInt  = 1;
     s_telInt   = s_prefs.getUChar("telInt", 1);   if (s_telInt  >= SQ_N(TEL_INT))  s_telInt  = 1;
     s_loraMsgSnd   = s_prefs.getBool("loraMsgSnd", true);
     s_loraMtPre[0] = '\0';

@@ -1081,6 +1081,7 @@ static void announceIfDue(const Profile& prof, const char* name, int8_t dbm) {
 static uint32_t s_posAt = 0, s_posRetry = 0, s_telAt = 0, s_telRetry = 0;
 static int32_t  s_posLat = 0, s_posLon = 0;
 static uint32_t s_telRxAir = 0, s_telTxAir = 0;
+static uint32_t s_nbrAt = 0, s_nbrRetry = 0;
 
 static float metresBetween(int32_t la1, int32_t lo1, int32_t la2, int32_t lo2) {
     const float dy = (float)(la2 - la1) * 0.011132f;                       // 1e-7 degree is 1.1132 cm
@@ -1103,8 +1104,49 @@ static bool sendOwn(uint8_t port, const uint8_t* payload, size_t n, const char* 
     return ok;
 }
 
+// The Meshtastic nodes heard directly -- a frame of their own, not a relayed copy
+// -- within two intervals, the ten most recent, with the SNR they were heard at.
+static uint8_t directNeighbors(uint32_t now, uint32_t windowMs, uint32_t* ids, float* snr, uint32_t* seen) {
+    static Nodes::Node rows[8];
+    uint8_t n = 0;
+    for (uint8_t page = 0; ; ) {
+        const uint8_t got = nodeSnapshot(rows, (uint8_t)(sizeof rows / sizeof rows[0]), page);
+        for (uint8_t i = 0; i < got; i++) {
+            const Nodes::Node& r = rows[i];
+            if (r.proto != Proto::MESHTASTIC || !r.directPackets || r.rssi <= -200) continue;
+            if (r.id == myMeshtasticNum() || now - r.lastMs > windowMs) continue;
+            // Keep the ten most recent: replace the oldest held when full.
+            uint8_t at = n;
+            if (n == 10) {
+                at = 0;
+                for (uint8_t k = 1; k < n; k++) if (seen[k] < seen[at]) at = k;
+                if (seen[at] >= r.lastMs) continue;
+            } else n++;
+            ids[at] = (uint32_t)r.id; snr[at] = r.snr4 / 4.0f; seen[at] = r.lastMs;
+        }
+        if (got < sizeof rows / sizeof rows[0]) break;
+        page = (uint8_t)(page + got);
+    }
+    return n;
+}
+
 static void broadcastTick(uint32_t now) {
     if (now < 20000) return;                                        // the boot is busy; nothing urgent
+    if (Settings::nbrShare() && now >= s_nbrRetry &&
+        (s_nbrAt ? now - s_nbrAt >= Settings::nbrIntervalSecs() * 1000u : now > 180000)) {   // a first look after three minutes of listening
+        uint32_t ids[10], seen[10];
+        float snr[10];
+        const uint8_t n = directNeighbors(now, Settings::nbrIntervalSecs() * 2000u, ids, snr, seen);
+        if (!n) {
+            s_nbrRetry = now + 600000;                              // nobody to name yet; look again in ten minutes
+        } else {
+            uint8_t p[160];
+            const uint32_t me = myMeshtasticNum();
+            const size_t len = Meshtastic::encodeNeighborInfo(me, me, Settings::nbrIntervalSecs(), ids, snr, n, p);
+            if (len && sendOwn((uint8_t)Meshtastic::PORT_NEIGHBORINFO, p, len, "neighbor info")) s_nbrAt = now;
+            else s_nbrRetry = now + 30000;
+        }
+    }
     if (Settings::posShare() && Gnss::fresh(now) && !Gnss::faked() && now >= s_posRetry) {
         const Gnss::Fix& g = Gnss::fix();
         bool due = !s_posAt || now - s_posAt >= Settings::posIntervalSecs() * 1000u;
